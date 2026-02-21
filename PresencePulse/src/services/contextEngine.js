@@ -1,124 +1,103 @@
-// Presence Pulse - Phase 1 Behavior Engine
+/*
+Presence Pulse – Phase 1 Behavior Detection Engine
 
-const MICRO_CHECK_THRESHOLD_MS = 20 * 1000; // 20 seconds
+GOAL:
+Implement a simple rule-based behavior engine for detecting Attention Drift
+based on session tracking and micro-check bursts.
+
+Implement everything cleanly below this comment.
+*/
+
+const MICRO_CHECK_THRESHOLD_SECONDS = 20;
 const BURST_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const BURST_COUNT = 5;
+const BURST_THRESHOLD = 5;
 
-class ContextEngine {
-  constructor() {
-    this.currentSession = null;
-    this.sessionHistory = [];
-    this.microCheckCount = 0;
-    this.microCheckTimestamps = [];
-    this.attentionDrift = false;
+let currentSession = null;
+let sessionHistory = [];
+let microCheckCount = 0;
+let attentionDrift = false;
+let microCheckTimestamps = [];
+
+const logPrefix = '[PresencePulse]';
+
+export function startSession() {
+  if (currentSession) {
+    console.log(`${logPrefix} Session already active; ignoring start request.`);
+    return;
   }
 
-  startSession() {
-    if (this.currentSession) {
-      console.warn('[ContextEngine] Attempted to start a new session before ending the current one.');
-      return;
-    }
+  currentSession = {
+    startTime: Date.now(),
+  };
 
-    this.currentSession = {
-      start: Date.now(),
-      end: null,
-      durationMs: null,
-      type: 'pending'
-    };
+  console.log('Session started');
+}
 
-    console.log('[ContextEngine] Session started at', new Date(this.currentSession.start).toISOString());
+export function endSession() {
+  if (!currentSession) {
+    console.log(`${logPrefix} No active session to end.`);
+    return null;
   }
 
-  endSession() {
-    if (!this.currentSession) {
-      console.warn('[ContextEngine] No active session to end.');
-      return null;
-    }
+  const endTime = Date.now();
+  const durationSeconds = (endTime - currentSession.startTime) / 1000;
 
-    this.currentSession.end = Date.now();
-    this.currentSession.durationMs = this.currentSession.end - this.currentSession.start;
+  const sessionRecord = {
+    startTime: currentSession.startTime,
+    endTime,
+    durationSeconds,
+    type:
+      durationSeconds < MICRO_CHECK_THRESHOLD_SECONDS
+        ? 'micro-check'
+        : 'session',
+  };
 
-    const isMicroCheck = this.detectMicroCheck(this.currentSession);
-    this.currentSession.type = isMicroCheck ? 'micro-check' : 'session';
+  sessionHistory.push(sessionRecord);
+  currentSession = null;
 
-    if (isMicroCheck) {
-      this._trackMicroCheckBurst(this.currentSession.end);
-    } else {
-      console.log('[ContextEngine] Full session recorded. Duration ms:', this.currentSession.durationMs);
-    }
+  console.log(
+    `Session ended with duration ${durationSeconds.toFixed(2)}s`
+  );
 
-    this.sessionHistory.push({ ...this.currentSession });
-    const completedSession = this.currentSession;
-    this.currentSession = null;
-
-    return completedSession;
+  if (sessionRecord.type === 'micro-check') {
+    microCheckCount += 1;
+    console.log(`Micro-check detected. Count: ${microCheckCount}`);
+    trackBurst(endTime);
+  } else {
+    console.log(`${logPrefix} Standard session recorded.`);
   }
 
-  detectMicroCheck(session) {
-    if (!session || session.durationMs == null) {
-      return false;
-    }
+  return sessionRecord;
+}
 
-    const isMicroCheck = session.durationMs < MICRO_CHECK_THRESHOLD_MS;
+function trackBurst(referenceTime) {
+  microCheckTimestamps.push(referenceTime);
+  microCheckTimestamps = microCheckTimestamps.filter(
+    (timestamp) => referenceTime - timestamp <= BURST_WINDOW_MS
+  );
 
-    if (isMicroCheck) {
-      this.microCheckCount += 1;
-      console.log(
-        '[ContextEngine] Micro-check detected. Duration ms:',
-        session.durationMs,
-        'Total micro-checks:',
-        this.microCheckCount,
-      );
-    }
+  console.log(`Burst count: ${microCheckTimestamps.length}`);
 
-    return isMicroCheck;
-  }
-
-  detectBurst(referenceTimestamp = Date.now()) {
-    this.microCheckTimestamps = this.microCheckTimestamps.filter(
-      (entry) => referenceTimestamp - entry <= BURST_WINDOW_MS
-    );
-
-    const burstCount = this.microCheckTimestamps.length;
-    console.log('[ContextEngine] Burst window count:', burstCount);
-
-    if (burstCount >= BURST_COUNT) {
-      this.attentionDrift = true;
-      console.log('Attention drift detected');
-      return true;
-    }
-
-    return false;
-  }
-
-  _trackMicroCheckBurst(timestamp) {
-    this.microCheckTimestamps.push(timestamp);
-    this.detectBurst(timestamp);
-  }
-
-  getSessionHistory() {
-    return [...this.sessionHistory];
-  }
-
-  getMicroCheckCount() {
-    return this.microCheckCount;
-  }
-
-  hasAttentionDrift() {
-    return this.attentionDrift;
-  }
-
-  resetAttentionDrift() {
-    this.attentionDrift = false;
-    this.microCheckTimestamps = [];
-    console.log('[ContextEngine] Attention drift state reset.');
+  if (microCheckTimestamps.length >= BURST_THRESHOLD && !attentionDrift) {
+    attentionDrift = true;
+    console.log('Attention drift detected');
   }
 }
 
-const contextEngine = new ContextEngine();
+export function getAttentionDrift() {
+  return attentionDrift;
+}
 
-export const startSession = () => contextEngine.startSession();
-export const endSession = () => contextEngine.endSession();
-export const hasAttentionDrift = () => contextEngine.hasAttentionDrift();
+export function resetDrift() {
+  attentionDrift = false;
+  microCheckTimestamps = [];
+  console.log(`${logPrefix} Attention drift state reset.`);
+}
 
-export default contextEngine;
+export function getSessionHistory() {
+  return [...sessionHistory];
+}
+
+export function getMicroCheckCount() {
+  return microCheckCount;
+}
