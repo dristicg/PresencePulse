@@ -1,97 +1,139 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+<div align="center">
 
-# Getting Started
+# PresencePulse
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+_A mobile behavior engine that tracks social-mode sessions, flags micro-checks, and surfaces attention drift in real time._
 
-## Step 1: Start Metro
+</div>
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Table of Contents
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+1. [Overview](#overview)
+2. [Feature Highlights](#feature-highlights)
+3. [Architecture](#architecture)
+4. [Project Structure](#project-structure)
+5. [Getting Started](#getting-started)
+6. [Development Workflow](#development-workflow)
+7. [Testing & Quality](#testing--quality)
+8. [Troubleshooting](#troubleshooting)
+9. [Roadmap](#roadmap)
+
+## Overview
+
+PresencePulse is an experimental React Native application that helps surface patterns of fragmented attention. A lightweight in-app **Social Mode** triggers the `contextEngine`, which records session boundaries, classifies micro-checks (sessions shorter than 20 seconds), and raises an **attention drift** signal when bursts of interruptions occur.
+
+The project currently focuses on _Phase 1_ instrumentation so we can demo session tracking, logging, and visualization quickly before layering on coaching content or notifications.
+
+## Feature Highlights
+
+- **Social Mode Toggle** – Single CTA in `App.tsx` that starts or ends monitoring sessions with one tap.
+- **Context Engine (Phase 1)** – Centralized service (`src/services/contextEngine.js`) that stores session history, micro-check counts, and burst metadata.
+- **Attention Drift Detection** – Five micro-checks in a rolling 10-minute window auto-set `attentionDrift` and display a banner in the UI.
+- **Behavior Snapshot Panel** – Embedded debug dashboard showing live counts for sessions, micro-checks, burst-window activity, and social-mode status to accelerate validation during demos.
+- **Verbose Demo Logging** – Every significant state transition is logged with ISO timestamps for clarity when screen-sharing or reviewing device logs.
+
+## Architecture
+
+| Layer | Responsibility | Key Files |
+| --- | --- | --- |
+| UI Shell | Hosts Social Mode CTA, renders snapshot metrics, and mirrors engine state. | `App.tsx` |
+| Behavior Engine | Encapsulates session lifecycle, micro-check classification, burst detection, and attention-drift flagging. | `src/services/contextEngine.js` |
+| Platform Scaffolding | Standard React Native entry points, Metro, Babel, and native projects for Android/iOS. | Root config (`package.json`, `metro.config.js`, `android/`, `ios/`) |
+
+### Context Engine Flow
+
+1. `startSession()` captures `Date.now()` and guards against overlapping sessions.
+2. `endSession()` computes duration, classifies the result, and persists it into the in-memory history.
+3. `detectMicroCheck()` increments `microCheckCount` and logs when duration `< 20s`.
+4. `detectBurst()` maintains a sliding 10-minute window of micro-checks and flips `attentionDrift` after five hits.
+5. UI polls `contextEngine.hasAttentionDrift()` after each toggle to keep the visual alert synchronized.
+
+## Project Structure
+
+```
+PresencePulse/
+├── App.tsx                     # Social Mode UI + hook orchestration
+├── src/
+│   └── services/
+│       └── contextEngine.js   # Phase 1 behavior engine
+├── __tests__/
+│   └── App.test.tsx           # Jest baseline test
+├── android/                   # Native Android wrapper (Gradle)
+├── ios/                       # Native iOS wrapper (Xcode/Pods)
+├── package.json               # Scripts, dependencies, engines
+└── ...                        # Metro, Babel, Jest, TypeScript configs
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js `>= 22.11.0`
+- Watchman (macOS) and Java 17+ for Android builds
+- Xcode 15+ with CocoaPods for iOS
+- Android Studio / SDK Platform 35 with an emulator or USB debugging enabled device
+- Follow the official [React Native environment setup](https://reactnative.dev/docs/set-up-your-environment) for “React Native CLI”
+
+### Installation
 
 ```sh
-# Using npm
-npm start
+git clone https://github.com/<your-org>/PresencePulse.git
+cd PresencePulse
+npm install
+```
 
-# OR using Yarn
+### Running Metro (all platforms)
+
+```sh
+npm start
+# or
 yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+### Launching the app
 
 ```sh
-# Using npm
+# Android (emulator or device)
 npm run android
 
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# iOS (requires CocoaPods)
+cd ios && bundle install && bundle exec pod install
+cd ..
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+> **Tip:** When deploying to a physical Android device, forward Metro using `adb reverse tcp:8081 tcp:8081` to ensure the JS bundle can be reached.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Development Workflow
 
-## Step 3: Modify your app
+- **Iterate in App.tsx**: Hook new UI elements into the Social Mode state and call the exported helpers from `contextEngine`.
+- **Extend the Engine**: Add new behavior in `src/services/contextEngine.js` (e.g., persistence, analytics) while reusing the existing public helpers (`startSession`, `endSession`, `hasAttentionDrift`).
+- **Logging Strategy**: Keep console statements concise and prefixed (e.g., `[ContextEngine]`, `[Session]`) to make Metro logs easy to scan during usability sessions.
+- **State Resetting**: Use `contextEngine.resetAttentionDrift()` or reload the bundle (double-`R` on Android, `Cmd+R` on iOS sim) to clear demo state quickly.
 
-Now that you have successfully run the app, let's make changes!
+## Testing & Quality
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+| Command | Description |
+| --- | --- |
+| `npm run test` | Runs Jest test suite in `__tests__/`. Add coverage for new engine utilities as they are built. |
+| `npm run lint` | Executes ESLint using the React Native shared config. |
+| `npm run android` / `npm run ios` | Full native builds; surface TypeScript and runtime issues early. |
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+Future milestones include snapshot tests for the Social Mode UI and focused unit tests around burst detection to prevent regressions.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Troubleshooting
 
-## Congratulations! :tada:
+- **Metro cannot find the device** – Ensure `adb devices` lists your hardware/emulator and run `adb reverse tcp:8081 tcp:8081` when on USB.
+- **Stuck on old bundle** – Stop Metro (`CTRL+C`) and clear its cache: `npx react-native start --reset-cache`.
+- **CocoaPods failures** – Run `sudo gem install cocoapods` then `bundle exec pod repo update` inside `ios/`.
+- **Permission issues on Android** – Delete the `android/app/build` folder and rerun `npm run android` to trigger a clean Gradle build.
 
-You've successfully run and modified your React Native App. :partying_face:
+## Roadmap
 
-### Now what?
+- Phase 2: Persist session history to durable storage for longitudinal insights.
+- Phase 3: Layer on interventions (nudges, reminders) when attention drift is active.
+- Phase 4: Sync telemetry to a backend for team-level reporting and research.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+---
 
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+For questions or ideas, open an issue or start a discussion in the repository. Let’s build healthier digital habits together. ✨

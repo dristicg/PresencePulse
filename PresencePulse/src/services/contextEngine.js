@@ -17,6 +17,7 @@ let sessionHistory = [];
 let microCheckCount = 0;
 let attentionDrift = false;
 let microCheckTimestamps = [];
+let burstCount = 0;
 
 const logPrefix = '[PresencePulse]';
 
@@ -80,6 +81,7 @@ function trackBurst(referenceTime) {
 
   if (microCheckTimestamps.length >= BURST_THRESHOLD && !attentionDrift) {
     attentionDrift = true;
+    burstCount += 1;
     console.log('Attention drift detected');
   }
 }
@@ -100,4 +102,13 @@ export function getSessionHistory() {
 
 export function getMicroCheckCount() {
   return microCheckCount;
+}
+
+export function getBurstCount() {
+  return burstCount;
+}
+
+export function getPresenceScore() {
+  const score = 100 - microCheckCount * 2;
+  return Math.max(0, Math.floor(score));
 }
