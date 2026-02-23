@@ -11,6 +11,8 @@ import {
   getBurstCount,
   getMicroCheckCount,
   getPresenceScore,
+  startSession,
+  endSession,
 } from './src/services/contextEngine';
 
 function App() {
@@ -30,24 +32,55 @@ function ScreenManager() {
   const [burstEvents, setBurstEvents] = useState(0);
   const [presenceScore, setPresenceScore] = useState(100);
 
+  const refreshMetrics = () => {
+    setMicroChecks(getMicroCheckCount());
+    setBurstEvents(getBurstCount());
+    setPresenceScore(getPresenceScore());
+  };
+
   useEffect(() => {
     if (screen === 'insights') {
-      setMicroChecks(getMicroCheckCount());
-      setBurstEvents(getBurstCount());
-      setPresenceScore(getPresenceScore());
+      console.log('---- INSIGHTS REFRESH ----');
+      console.log('Micro:', getMicroCheckCount());
+      console.log('Burst:', getBurstCount());
+      console.log('Score:', getPresenceScore());
+
+      refreshMetrics();
+    }
+  }, [screen]);
+
+  useEffect(() => {
+    if (screen === 'home') {
+      refreshMetrics();
     }
   }, [screen]);
 
   const renderHome = () => (
-    <View style={styles.centeredBlock}>
-      <Text style={styles.title}>Presence Pulse</Text>
-      <Text style={styles.tagline}>Real-time behavioral analysis</Text>
-      <Text style={styles.subtitle}>
-        Monitor your digital attention in real-time
-      </Text>
+    <View style={styles.homeWrapper}>
+      <View style={styles.headerBlock}>
+        <Text style={styles.appName}>Presence Pulse</Text>
+        <Text style={styles.tagline}>Detect. Reflect. Reconnect.</Text>
+      </View>
+
+      <View style={styles.presenceCard}>
+        <Text style={styles.presenceLabel}>Presence Score</Text>
+        <View style={styles.scoreCircle}>
+          <Text style={styles.scoreValue}>{presenceScore}%</Text>
+        </View>
+        <Text style={styles.presenceSubtitle}>Your Current Presence Score</Text>
+      </View>
+
+      <View style={styles.metricsRow}>
+        <MetricCard label="Micro-checks Today" value={String(microChecks)} />
+        <MetricCard label="Burst Events" value={String(burstEvents)} />
+      </View>
+
       <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => setScreen('social')}
+        style={[styles.primaryButton, styles.homeButton]}
+        onPress={() => {
+          startSession();
+          setScreen('social');
+        }}
       >
         <Text style={styles.primaryButtonText}>Start Social Mode</Text>
       </TouchableOpacity>
@@ -60,7 +93,11 @@ function ScreenManager() {
       <Text style={styles.subtitle}>Tracking your attention...</Text>
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => setScreen('drift')}
+        onPress={() => {
+          endSession();
+          refreshMetrics();
+          setScreen('drift');
+        }}
       >
         <Text style={styles.primaryButtonText}>End Session</Text>
       </TouchableOpacity>
@@ -93,7 +130,10 @@ function ScreenManager() {
       </View>
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => setScreen('insights')}
+        onPress={() => {
+          refreshMetrics();
+          setScreen('insights');
+        }}
       >
         <Text style={styles.primaryButtonText}>Continue to Insights</Text>
       </TouchableOpacity>
@@ -145,7 +185,10 @@ function ScreenManager() {
       </View>
       <TouchableOpacity
         style={styles.secondaryButton}
-        onPress={() => setScreen('insights')}
+        onPress={() => {
+          refreshMetrics();
+          setScreen('insights');
+        }}
       >
         <Text style={styles.secondaryButtonText}>Back to Insights</Text>
       </TouchableOpacity>
@@ -188,6 +231,15 @@ function InsightCard({
       <Text style={emphasize ? styles.cardValueLarge : styles.cardValue}>
         {value}
       </Text>
+    </View>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricCard}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
     </View>
   );
 }
@@ -341,6 +393,81 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
     fontSize: 17,
     fontWeight: '600',
+  },
+  homeWrapper: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingVertical: 40,
+  },
+  headerBlock: {
+    gap: 8,
+  },
+  appName: {
+    fontSize: 34,
+    color: '#F8FAFC',
+    fontWeight: '800',
+  },
+  presenceCard: {
+    backgroundColor: '#111C2F',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  presenceLabel: {
+    color: '#94A3B8',
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 16,
+  },
+  scoreCircle: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    borderWidth: 8,
+    borderColor: '#2563EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  scoreValue: {
+    color: '#F8FAFC',
+    fontSize: 42,
+    fontWeight: '800',
+  },
+  presenceSubtitle: {
+    color: '#CBD5F5',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#1E293B',
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#222F44',
+  },
+  metricLabel: {
+    color: '#94A3B8',
+    fontSize: 13,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  metricValue: {
+    color: '#F8FAFC',
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  homeButton: {
+    marginTop: 24,
   },
 });
 
