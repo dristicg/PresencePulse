@@ -10,9 +10,11 @@ import {
 import { 
   getBurstCount,
   getDriftSeverity,
+  getDriftThreshold,
   getMicroCheckCount,
   getPresenceScore,
   getScoreCategory,
+  setDriftThreshold,
   startSession,
   endSession,
 } from './src/services/contextEngine';
@@ -31,25 +33,50 @@ type ScoreVisual = {
   surface: string;
 };
 
+type SensitivityMode = 'Strict' | 'Normal' | 'Relaxed';
+
 const SCORE_VISUALS: Record<string, ScoreVisual> = {
   High: { accent: '#22C55E', surface: '#102A1A' },
   Medium: { accent: '#EAB308', surface: '#2A1F0A' },
   Low: { accent: '#EF4444', surface: '#2F0F11' },
 };
 
+const SENSITIVITY_OPTIONS: Array<{
+  mode: SensitivityMode;
+  title: string;
+  description: string;
+}> = [
+  { mode: 'Strict', title: 'Strict Mode', description: '3 micro-check threshold' },
+  { mode: 'Normal', title: 'Normal Mode', description: '5 micro-check threshold' },
+  { mode: 'Relaxed', title: 'Relaxed Mode', description: '7 micro-check threshold' },
+];
+
 function resolveScoreVisual(category: string): ScoreVisual {
   return SCORE_VISUALS[category] ?? SCORE_VISUALS.Low;
 }
 
+function resolveModeFromThreshold(threshold: number): SensitivityMode {
+  if (threshold <= 3) {
+    return 'Strict';
+  }
+
+  if (threshold >= 7) {
+    return 'Relaxed';
+  }
+
+  return 'Normal';
+}
+
 function ScreenManager() {
   const [screen, setScreen] = useState<
-    'home' | 'social' | 'drift' | 'reconnect' | 'insights' | 'timeline'
+    'home' | 'social' | 'drift' | 'reconnect' | 'insights' | 'timeline' | 'settings'
   >('home');
   const [microChecks, setMicroChecks] = useState(0);
   const [burstEvents, setBurstEvents] = useState(0);
   const [presenceScore, setPresenceScore] = useState(100);
   const [scoreCategory, setScoreCategory] = useState('High');
   const [severity, setSeverity] = useState('None');
+  const [sensitivityMode, setSensitivityMode] = useState<SensitivityMode>('Normal');
 
   const refreshMetrics = () => {
     setMicroChecks(getMicroCheckCount());
@@ -76,14 +103,33 @@ function ScreenManager() {
     }
   }, [screen]);
 
+  useEffect(() => {
+    setSensitivityMode(resolveModeFromThreshold(getDriftThreshold()));
+  }, []);
+
+  const handleModeSelect = (mode: SensitivityMode) => {
+    setDriftThreshold(mode);
+    setSensitivityMode(mode);
+    refreshMetrics();
+    setScreen('home');
+  };
+
   const scoreVisual = resolveScoreVisual(scoreCategory);
   const scoreAccentColor = scoreVisual.accent;
 
   const renderHome = () => (
     <View style={styles.homeWrapper}>
-      <View style={styles.headerBlock}>
-        <Text style={styles.appName}>Presence Pulse</Text>
-        <Text style={styles.tagline}>Detect. Reflect. Reconnect.</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerBlock}>
+          <Text style={styles.appName}>Presence Pulse</Text>
+          <Text style={styles.tagline}>Detect. Reflect. Reconnect.</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => setScreen('settings')}
+        >
+          <Text style={styles.settingsButtonText}>Settings</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.presenceCard, { borderColor: scoreAccentColor }]}>
@@ -243,6 +289,45 @@ function ScreenManager() {
     </View>
   );
 
+  const renderSettings = () => (
+    <View style={styles.centeredBlock}>
+      <Text style={styles.title}>Sensitivity Settings</Text>
+      <View style={styles.settingsGroup}>
+        {SENSITIVITY_OPTIONS.map((option) => {
+          const selected = option.mode === sensitivityMode;
+          return (
+            <TouchableOpacity
+              key={option.mode}
+              style={[
+                styles.settingOption,
+                selected && styles.settingOptionSelected,
+              ]}
+              onPress={() => handleModeSelect(option.mode)}
+            >
+              <Text
+                style={[
+                  styles.settingOptionTitle,
+                  selected && styles.settingOptionTitleSelected,
+                ]}
+              >
+                {option.title}
+              </Text>
+              <Text style={styles.settingOptionSubtitle}>
+                {option.description}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() => setScreen('home')}
+      >
+        <Text style={styles.secondaryButtonText}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderScreen = () => {
     switch (screen) {
       case 'social':
@@ -255,6 +340,8 @@ function ScreenManager() {
         return renderInsights();
       case 'timeline':
         return renderTimeline();
+      case 'settings':
+        return renderSettings();
       case 'home':
       default:
         return renderHome();
@@ -473,8 +560,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 40,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
   headerBlock: {
     gap: 8,
+    flex: 1,
+  },
+  settingsButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#1F2B40',
+    backgroundColor: '#132038',
+  },
+  settingsButtonText: {
+    color: '#60A5FA',
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontSize: 12,
   },
   appName: {
     fontSize: 34,
@@ -552,6 +661,35 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     fontSize: 28,
     fontWeight: '700',
+  },
+  settingsGroup: {
+    width: '100%',
+    gap: 16,
+    marginVertical: 32,
+  },
+  settingOption: {
+    backgroundColor: '#17233A',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#1F2B40',
+  },
+  settingOptionSelected: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#13213A',
+  },
+  settingOptionTitle: {
+    color: '#E2E8F0',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  settingOptionTitleSelected: {
+    color: '#60A5FA',
+  },
+  settingOptionSubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
   },
   homeButton: {
     marginTop: 24,

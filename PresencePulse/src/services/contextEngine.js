@@ -12,6 +12,8 @@ const MICRO_CHECK_THRESHOLD_SECONDS = 20;
 const BURST_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const BURST_THRESHOLD = 5;
 
+let driftThreshold = 5; // default = Normal
+
 let currentSession = null;
 let sessionHistory = [];
 let microCheckCount = 0;
@@ -82,7 +84,7 @@ function trackBurst(referenceTime) {
 
   console.log(`Burst count: ${microCheckTimestamps.length}`);
 
-  if (microCheckTimestamps.length >= BURST_THRESHOLD && !attentionDrift) {
+  if (microCheckTimestamps.length >= driftThreshold && !attentionDrift) {
     attentionDrift = true;
     burstCount += 1;
     console.log('Attention drift detected');
@@ -159,4 +161,23 @@ export function getScoreCategory() {
   }
 
   return 'Low';
+}
+
+export function setDriftThreshold(mode) {
+  switch (mode) {
+    case 'Strict':
+      driftThreshold = 3;
+      break;
+    case 'Relaxed':
+      driftThreshold = 7;
+      break;
+    case 'Normal':
+    default:
+      driftThreshold = BURST_THRESHOLD;
+      break;
+  }
+}
+
+export function getDriftThreshold() {
+  return driftThreshold;
 }
