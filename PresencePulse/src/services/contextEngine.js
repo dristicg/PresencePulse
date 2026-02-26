@@ -138,3 +138,25 @@ export function getPresenceScore() {
   const score = 100 - microCheckCount * 2;
   return Math.max(0, Math.floor(score));
 }
+
+export function getScoreCategory() {
+  if (microCheckCount >= 9) {
+    return 'Low';
+  }
+
+  if (microCheckCount >= 5) {
+    return 'Medium';
+  }
+
+  const score = getPresenceScore();
+
+  if (score >= 80) {
+    return 'High';
+  }
+
+  if (score >= 50) {
+    return 'Medium';
+  }
+
+  return 'Low';
+}

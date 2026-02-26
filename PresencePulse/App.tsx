@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
+import { 
   getBurstCount,
   getDriftSeverity,
   getMicroCheckCount,
   getPresenceScore,
+  getScoreCategory,
   startSession,
   endSession,
 } from './src/services/contextEngine';
@@ -25,6 +26,21 @@ function App() {
   );
 }
 
+type ScoreVisual = {
+  accent: string;
+  surface: string;
+};
+
+const SCORE_VISUALS: Record<string, ScoreVisual> = {
+  High: { accent: '#22C55E', surface: '#102A1A' },
+  Medium: { accent: '#EAB308', surface: '#2A1F0A' },
+  Low: { accent: '#EF4444', surface: '#2F0F11' },
+};
+
+function resolveScoreVisual(category: string): ScoreVisual {
+  return SCORE_VISUALS[category] ?? SCORE_VISUALS.Low;
+}
+
 function ScreenManager() {
   const [screen, setScreen] = useState<
     'home' | 'social' | 'drift' | 'reconnect' | 'insights' | 'timeline'
@@ -32,12 +48,15 @@ function ScreenManager() {
   const [microChecks, setMicroChecks] = useState(0);
   const [burstEvents, setBurstEvents] = useState(0);
   const [presenceScore, setPresenceScore] = useState(100);
+  const [scoreCategory, setScoreCategory] = useState('High');
   const [severity, setSeverity] = useState('None');
 
   const refreshMetrics = () => {
     setMicroChecks(getMicroCheckCount());
     setBurstEvents(getBurstCount());
-    setPresenceScore(getPresenceScore());
+    const latestScore = getPresenceScore();
+    setPresenceScore(latestScore);
+    setScoreCategory(getScoreCategory());
   };
 
   useEffect(() => {
@@ -46,22 +65,19 @@ function ScreenManager() {
       console.log('Micro:', getMicroCheckCount());
       console.log('Burst:', getBurstCount());
       console.log('Score:', getPresenceScore());
+    }
 
+    if (screen === 'home' || screen === 'insights') {
       refreshMetrics();
     }
-  }, [screen]);
 
-  useEffect(() => {
-    if (screen === 'home') {
-      refreshMetrics();
-    }
-  }, [screen]);
-
-  useEffect(() => {
     if (screen === 'insights' || screen === 'drift') {
       setSeverity(getDriftSeverity());
     }
   }, [screen]);
+
+  const scoreVisual = resolveScoreVisual(scoreCategory);
+  const scoreAccentColor = scoreVisual.accent;
 
   const renderHome = () => (
     <View style={styles.homeWrapper}>
@@ -70,10 +86,27 @@ function ScreenManager() {
         <Text style={styles.tagline}>Detect. Reflect. Reconnect.</Text>
       </View>
 
-      <View style={styles.presenceCard}>
+      <View style={[styles.presenceCard, { borderColor: scoreAccentColor }]}>
         <Text style={styles.presenceLabel}>Presence Score</Text>
-        <View style={styles.scoreCircle}>
-          <Text style={styles.scoreValue}>{presenceScore}%</Text>
+        <View style={[styles.scoreCircle, { borderColor: scoreAccentColor }]}>
+          <Text style={[styles.scoreValue, { color: scoreAccentColor }]}>
+            {presenceScore}%
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.scoreCategoryTag,
+            {
+              backgroundColor: scoreVisual.surface,
+              borderColor: scoreAccentColor,
+            },
+          ]}
+        >
+          <Text
+            style={[styles.scoreCategoryTagText, { color: scoreAccentColor }]}
+          >
+            {scoreCategory} Focus
+          </Text>
         </View>
         <Text style={styles.presenceSubtitle}>Your Current Presence Score</Text>
       </View>
@@ -165,6 +198,8 @@ function ScreenManager() {
           label="Presence Score"
           value={`${presenceScore}%`}
           emphasize
+          accentColor={scoreAccentColor}
+          detail={`${scoreCategory} Focus`}
         />
         <InsightCard
           label="Current Drift Severity"
@@ -233,17 +268,29 @@ function InsightCard({
   label,
   value,
   emphasize = false,
+  accentColor,
+  detail,
 }: {
   label: string;
   value: string;
   emphasize?: boolean;
+  accentColor?: string;
+  detail?: string;
 }) {
   return (
-    <View style={styles.card}>
+    <View
+      style={[styles.card, accentColor ? { borderColor: accentColor } : null]}
+    >
       <Text style={styles.cardLabel}>{label}</Text>
-      <Text style={emphasize ? styles.cardValueLarge : styles.cardValue}>
+      <Text
+        style={[
+          emphasize ? styles.cardValueLarge : styles.cardValue,
+          accentColor ? { color: accentColor } : null,
+        ]}
+      >
         {value}
       </Text>
+      {detail ? <Text style={styles.cardDetail}>{detail}</Text> : null}
     </View>
   );
 }
@@ -375,6 +422,13 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '800',
   },
+  cardDetail: {
+    color: '#94A3B8',
+    fontSize: 12,
+    marginTop: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   secondaryButton: {
     paddingVertical: 12,
     paddingHorizontal: 32,
@@ -461,6 +515,19 @@ const styles = StyleSheet.create({
     color: '#CBD5F5',
     fontSize: 14,
     textAlign: 'center',
+  },
+  scoreCategoryTag: {
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  scoreCategoryTagText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   metricsRow: {
     flexDirection: 'row',
