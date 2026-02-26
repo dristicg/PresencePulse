@@ -18,6 +18,7 @@ let microCheckCount = 0;
 let attentionDrift = false;
 let microCheckTimestamps = [];
 let burstCount = 0;
+let driftSeverity = 'None';
 
 const logPrefix = '[PresencePulse]';
 
@@ -68,6 +69,8 @@ export function endSession() {
     console.log(`${logPrefix} Standard session recorded.`);
   }
 
+  updateDriftSeverity();
+
   return sessionRecord;
 }
 
@@ -84,10 +87,33 @@ function trackBurst(referenceTime) {
     burstCount += 1;
     console.log('Attention drift detected');
   }
+
+  updateDriftSeverity();
+}
+
+function updateDriftSeverity() {
+  let nextSeverity = 'None';
+
+  if (microCheckCount >= 13) {
+    nextSeverity = 'Severe';
+  } else if (microCheckCount >= 9) {
+    nextSeverity = 'Moderate';
+  } else if (microCheckCount >= 5) {
+    nextSeverity = 'Mild';
+  }
+
+  if (nextSeverity !== driftSeverity) {
+    driftSeverity = nextSeverity;
+    console.log(`${logPrefix} Drift severity set to ${driftSeverity}.`);
+  }
 }
 
 export function getAttentionDrift() {
   return attentionDrift;
+}
+
+export function getDriftSeverity() {
+  return driftSeverity;
 }
 
 export function resetDrift() {

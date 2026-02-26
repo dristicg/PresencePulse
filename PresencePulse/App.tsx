@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {
   getBurstCount,
+  getDriftSeverity,
   getMicroCheckCount,
   getPresenceScore,
   startSession,
@@ -31,6 +32,7 @@ function ScreenManager() {
   const [microChecks, setMicroChecks] = useState(0);
   const [burstEvents, setBurstEvents] = useState(0);
   const [presenceScore, setPresenceScore] = useState(100);
+  const [severity, setSeverity] = useState('None');
 
   const refreshMetrics = () => {
     setMicroChecks(getMicroCheckCount());
@@ -52,6 +54,12 @@ function ScreenManager() {
   useEffect(() => {
     if (screen === 'home') {
       refreshMetrics();
+    }
+  }, [screen]);
+
+  useEffect(() => {
+    if (screen === 'insights' || screen === 'drift') {
+      setSeverity(getDriftSeverity());
     }
   }, [screen]);
 
@@ -107,6 +115,7 @@ function ScreenManager() {
   const renderDrift = () => (
     <View style={styles.centeredBlock}>
       <Text style={styles.warning}>⚠ Attention Drift Detected</Text>
+      <Text style={styles.severityLabel}>Drift Level: {severity}</Text>
       <Text style={styles.subtitle}>
         You've had multiple micro-check bursts in the last 10 minutes.
       </Text>
@@ -156,6 +165,10 @@ function ScreenManager() {
           label="Presence Score"
           value={`${presenceScore}%`}
           emphasize
+        />
+        <InsightCard
+          label="Current Drift Severity"
+          value={severity}
         />
       </View>
       <TouchableOpacity
@@ -325,6 +338,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 16,
+  },
+  severityLabel: {
+    fontSize: 18,
+    color: '#FBBF24',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   cardGroup: {
     width: '100%',
