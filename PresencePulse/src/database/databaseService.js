@@ -24,7 +24,10 @@ export const initDatabase = async () => {
         startTime INTEGER,
         endTime INTEGER,
         duration INTEGER,
-        type TEXT
+        type TEXT,
+        socialContext INTEGER DEFAULT 0,
+        triggerType TEXT,
+        isPhubbing INTEGER DEFAULT 0
       );
     `);
 
@@ -46,10 +49,10 @@ export const initDatabase = async () => {
 export const insertSession = async (session) => {
     if (!db) return;
     try {
-        const { packageName, startTime, endTime, duration, type } = session;
+        const { packageName, startTime, endTime, duration, type, socialContext = 0, triggerType = 'unknown', isPhubbing = 0 } = session;
         await db.executeSql(
-            `INSERT INTO sessions (packageName, startTime, endTime, duration, type) VALUES (?, ?, ?, ?, ?)`,
-            [packageName, startTime, endTime, duration, type]
+            `INSERT INTO sessions (packageName, startTime, endTime, duration, type, socialContext, triggerType, isPhubbing) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [packageName, startTime, endTime, duration, type, socialContext ? 1 : 0, triggerType, isPhubbing ? 1 : 0]
         );
         console.log(`[PresencePulse DB] Inserted session: ${type} for ${packageName}`);
     } catch (error) {

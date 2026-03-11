@@ -18,6 +18,7 @@ public class UsageStatsPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(@NonNull ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
         modules.add(new UsageStatsModule(reactContext));
+        modules.add(new BluetoothScannerModule(reactContext));
         return modules;
     }
 

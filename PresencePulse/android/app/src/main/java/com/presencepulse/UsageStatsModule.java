@@ -3,8 +3,10 @@ package com.presencepulse;
 import android.app.AppOpsManager;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStatsManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Process;
 import android.provider.Settings;
 
@@ -18,14 +20,39 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 
+import com.facebook.react.modules.core.DeviceEventManagerModule;
+
 public class UsageStatsModule extends ReactContextBaseJavaModule {
 
     private static final String MODULE_NAME = "UsageStatsModule";
     private final ReactApplicationContext reactContext;
+    private BroadcastReceiver screenUnlockReceiver;
 
     public UsageStatsModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
+        setupUnlockReceiver();
+    }
+
+    private void setupUnlockReceiver() {
+        screenUnlockReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (Intent.ACTION_USER_PRESENT.equals(intent.getAction())) {
+                    sendEvent("onScreenUnlock", (double) System.currentTimeMillis());
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(Intent.ACTION_USER_PRESENT);
+        reactContext.registerReceiver(screenUnlockReceiver, filter);
+    }
+
+    private void sendEvent(String eventName, Object data) {
+        if (reactContext.hasActiveCatalystInstance()) {
+            reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventName, data);
+        }
     }
 
     @NonNull

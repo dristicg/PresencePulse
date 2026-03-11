@@ -24,9 +24,14 @@ import {
   checkUsageAccessPermission,
   getRecentUsageEvents,
   openUsageAccessSettings,
+  listenForUnlockEvents,
 } from './src/services/usageTrackingService';
 import { initDatabase, getDailyMetrics } from './src/database/databaseService';
-import { initializeStateFromStorage } from './src/services/contextEngine';
+import { initializeStateFromStorage, registerScreenUnlock, setSocialContextActive } from './src/services/contextEngine';
+import { scanForDevices } from './src/services/bluetoothService';
+import { analyzePatterns } from './src/engine/patternAnalyzer';
+import { fetchDailyInsight } from './src/services/llmService';
+import { getCurrentNudgeTier, resetNudgeTier } from './src/engine/nudgeEngine';
 
 function App() {
   return (
@@ -86,6 +91,9 @@ function ScreenManager() {
   const [scoreCategory, setScoreCategory] = useState('High');
   const [severity, setSeverity] = useState('None');
   const [sensitivityMode, setSensitivityMode] = useState<SensitivityMode>('Normal');
+  const [topTrigger, setTopTrigger] = useState('Unknown');
+  const [vulnerableHour, setVulnerableHour] = useState(-1);
+  const [dailyInsight, setDailyInsight] = useState('Fetching your personalized coaching tip...');
 
   const refreshMetrics = () => {
     setMicroChecks(getMicroCheckCount());
@@ -93,6 +101,16 @@ function ScreenManager() {
     const latestScore = getPresenceScore();
     setPresenceScore(latestScore);
     setScoreCategory(getScoreCategory());
+
+    const nudgeTier = getCurrentNudgeTier();
+    if (nudgeTier >= 2) {
+      setScreen(prev => {
+        if (nudgeTier === 3 && prev !== 'reconnect') return 'reconnect';
+        if (nudgeTier === 2 && prev !== 'drift' && prev !== 'reconnect') return 'drift';
+        return prev;
+      });
+      resetNudgeTier();
+    }
   };
 
   useEffect(() => {
@@ -101,6 +119,11 @@ function ScreenManager() {
       console.log('Micro:', getMicroCheckCount());
       console.log('Burst:', getBurstCount());
       console.log('Score:', getPresenceScore());
+      analyzePatterns().then((result) => {
+        setTopTrigger(result.topTrigger);
+        setVulnerableHour(result.vulnerableHour);
+      });
+      fetchDailyInsight().then(setDailyInsight);
     }
 
     if (screen === 'home' || screen === 'insights') {
@@ -118,6 +141,7 @@ function ScreenManager() {
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
+    let bleIntervalId: ReturnType<typeof setInterval>;
 
     const startPolling = async () => {
       const hasPermission = await checkUsageAccessPermission();
@@ -135,6 +159,17 @@ function ScreenManager() {
       }, 5000);
     };
 
+    const startBlePolling = () => {
+      const runScan = async () => {
+        const deviceCount = await scanForDevices(5000);
+        console.log(`[PresencePulse] BLE Scan Complete: ${deviceCount} devices found.`);
+        setSocialContextActive(deviceCount >= 2);
+      };
+
+      runScan();
+      bleIntervalId = setInterval(runScan, 60000);
+    };
+
     const initializeSequence = async () => {
       await initDatabase();
 
@@ -144,14 +179,26 @@ function ScreenManager() {
       refreshMetrics();
 
       startPolling();
+      startBlePolling();
+
+      const unlockSubscription = listenForUnlockEvents((timestamp: number) => {
+        registerScreenUnlock(timestamp);
+      });
+
+      return () => {
+        if (unlockSubscription) unlockSubscription.remove();
+      }
     };
 
-    initializeSequence();
+    let cleanup = () => { };
+    initializeSequence().then(clean => {
+      if (clean) cleanup = clean;
+    });
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      if (intervalId) clearInterval(intervalId);
+      if (bleIntervalId) clearInterval(bleIntervalId);
+      cleanup();
     };
   }, []);
 
@@ -305,10 +352,17 @@ function ScreenManager() {
           detail={`${scoreCategory} Focus`}
         />
         <InsightCard
-          label="Current Drift Severity"
-          value={severity}
+          label="Top Phubbing Trigger"
+          value={topTrigger !== 'Unknown' ? topTrigger : '--'}
+          detail={vulnerableHour !== -1 ? `Peak at ${vulnerableHour}:00` : ''}
         />
       </View>
+
+      <View style={styles.insightBox}>
+        <Text style={styles.insightBoxLabel}>✨ AI COACHING INSIGHT</Text>
+        <Text style={styles.insightBoxText}>{dailyInsight}</Text>
+      </View>
+
       <TouchableOpacity
         style={[styles.primaryButton, styles.fullWidthButton]}
         onPress={() => setScreen('timeline')}
@@ -580,6 +634,29 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  insightBox: {
+    width: '100%',
+    backgroundColor: '#1C2B4B',
+    padding: 18,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#60A5FA',
+    marginBottom: 24,
+  },
+  insightBoxLabel: {
+    color: '#93C5FD',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  insightBoxText: {
+    color: '#E2E8F0',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
   secondaryButton: {
     paddingVertical: 12,

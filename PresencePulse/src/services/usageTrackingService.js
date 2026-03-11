@@ -1,6 +1,14 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, NativeEventEmitter } from 'react-native';
 
 const { UsageStatsModule } = NativeModules;
+const usageEventEmitter = new NativeEventEmitter(UsageStatsModule);
+
+export function listenForUnlockEvents(callback) {
+  if (!UsageStatsModule) return null;
+
+  // onScreenUnlock event is emitted from the native side
+  return usageEventEmitter.addListener('onScreenUnlock', callback);
+}
 
 export async function checkUsageAccessPermission() {
   if (!UsageStatsModule) {

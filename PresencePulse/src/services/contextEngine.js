@@ -24,6 +24,15 @@ let microCheckTimestamps = [];
 let burstCount = 0;
 let driftSeverity = 'None';
 
+// Phase 3 Additions
+let phubbingEventCount = 0;
+let currentSocialContext = false;
+
+export function setSocialContextActive(isActive) {
+  currentSocialContext = isActive;
+  console.log(`${logPrefix} Social Context set to: ${isActive}`);
+}
+
 const logPrefix = '[PresencePulse]';
 
 export function initializeStateFromStorage(metrics) {
@@ -31,9 +40,15 @@ export function initializeStateFromStorage(metrics) {
     microCheckCount = metrics.microChecks || 0;
     burstCount = metrics.burstEvents || 0;
     console.log(`${logPrefix} State restored from storage: MC=${microCheckCount}, Burst=${burstCount}`);
-  } else {
     console.log(`${logPrefix} No daily metrics found for today, starting fresh.`);
   }
+}
+
+export let lastUnlockTimestamp = null;
+
+export function registerScreenUnlock(timestamp) {
+  lastUnlockTimestamp = timestamp;
+  console.log(`${logPrefix} Screen unlocked at: ${new Date(timestamp).toLocaleTimeString()}`);
 }
 
 export function startSession() {
@@ -166,12 +181,13 @@ export function getBurstCount() {
 }
 
 export function getPresenceScore() {
-  const score = 100 - microCheckCount * 2;
+  // Phase 3: Heavy penalties for Phubbing (10 points each) vs Micro-checks (2 points)
+  const score = 100 - (microCheckCount * 2) - (phubbingEventCount * 10);
   return Math.max(0, Math.floor(score));
 }
 
 export function getScoreCategory() {
-  if (microCheckCount >= 9) {
+  if (phubbingEventCount > 0 || microCheckCount >= 9) {
     return 'Low';
   }
 
@@ -260,22 +276,42 @@ function processRealSession(session) {
   const durationSeconds = session.duration;
   const type = durationSeconds < MICRO_CHECK_THRESHOLD_SECONDS ? 'micro-check' : 'session';
 
+  // Phase 3: Identify Triggers
+  // If app opened within 15 seconds of unlock -> Habit. Otherwise -> Intentional
+  const timeSinceUnlock = lastUnlockTimestamp ? (session.startTime - lastUnlockTimestamp) : 99999;
+  const triggerType = timeSinceUnlock < 15000 ? 'habit' : 'intentional';
+
+  // Phase 3: Social Context and Phubbing
+  const socialContext = currentSocialContext ? 1 : 0;
+  const isPhubbing = (type === 'micro-check' && currentSocialContext) ? 1 : 0;
+
   const record = {
     startTime: session.startTime,
     endTime: session.endTime,
     durationSeconds,
     type,
-    packageName: session.packageName
+    packageName: session.packageName,
+    socialContext,
+    triggerType,
+    isPhubbing
   };
 
   sessionHistory.push(record);
-  console.log(`${logPrefix} Real session parsed: ${session.packageName} (${durationSeconds.toFixed(2)}s) - ${type}`);
+  console.log(`${logPrefix} Real session parsed: ${session.packageName} (${durationSeconds.toFixed(2)}s) - ${type}. Trigger: ${triggerType}. Phubbing: ${Boolean(isPhubbing)}`);
 
   if (type === 'micro-check') {
     microCheckCount += 1;
+    if (isPhubbing) {
+      phubbingEventCount += 1;
+      console.log(`${logPrefix} PHUBBING EVENT DETECTED. Heavy score penalty applied.`);
+    }
     console.log(`${logPrefix} Real Micro-check detected. Count: ${microCheckCount}`);
     trackBurst(session.endTime);
     triggerMetricsUpdate();
+
+    // Evaluate for a nudge
+    const { evaluateAndNudge } = require('../engine/nudgeEngine');
+    evaluateAndNudge(Boolean(isPhubbing));
   } else {
     updateDriftSeverity();
   }
