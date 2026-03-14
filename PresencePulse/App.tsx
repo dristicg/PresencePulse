@@ -41,6 +41,7 @@ import TimelineScreen from './src/screens/TimelineScreen';
 import ReconnectScreen from './src/screens/ReconnectScreen';
 import ReflectionModal from './src/components/ReflectionModal';
 import WeeklyHeatmap from './src/components/WeeklyHeatmap';
+import InsightsScreen from './src/screens/InsightsScreen';
 import HeatSignature from './src/components/HeatSignature';
 import TriggerFingerprint from './src/components/TriggerFingerprint';
 import { calculatePresenceDebt, getPresenceDebt } from './src/services/contextEngine';
@@ -448,135 +449,17 @@ function ScreenManager() {
   };
 
   const renderInsights = () => (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Your Attention Insights</Text>
-
-      {/* Phase 7: Weekly Presence Heatmap */}
-      {weeklyScores.length > 0 && <WeeklyHeatmap scores={weeklyScores} />}
-
-      <View style={styles.cardGroup}>
-        <InsightCard
-          label="Micro-checks Today"
-          value={String(microChecks)}
-        />
-        <InsightCard
-          label="Burst Events"
-          value={String(burstEvents)}
-        />
-        <InsightCard
-          label="Presence Score"
-          value={`${presenceScore}%`}
-          emphasize
-          accentColor={scoreAccentColor}
-          detail={`${scoreCategory} Focus`}
-        />
-        <InsightCard
-          label="Top Phubbing Trigger"
-          value={topTrigger !== 'Unknown' ? topTrigger : '--'}
-          detail={vulnerableHour !== -1 ? `Peak at ${vulnerableHour}:00` : ''}
-        />
-        <InsightCard
-          label="Rule Win Rate"
-          value={`${fiveSecondStats.rate}%`}
-          detail={`${fiveSecondStats.won} Wins / ${fiveSecondStats.lost} Losses`}
-        />
-      </View>
-
-      <HeatSignature heatMap={heatMap} />
-      <TriggerFingerprint breakdown={reflectionBreakdown} />
-
-      {/* Phase 7: Pattern Intelligence Cards */}
-      <View style={styles.patternSection}>
-        <View style={styles.patternCard}>
-          <Text style={styles.patternCardIcon}>🕐</Text>
-          <Text style={styles.patternCardLabel}>Most Vulnerable Hour</Text>
-          <Text style={styles.patternCardValue}>
-            {vulnerableHourData.hour >= 0
-              ? formatHourLabel(vulnerableHourData.hour)
-              : 'Not enough data'}
-          </Text>
-          {vulnerableHourData.micro_check_count > 0 && (
-            <Text style={styles.patternCardDetail}>
-              {vulnerableHourData.micro_check_count} micro-checks this week
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.patternCard}>
-          <Text style={styles.patternCardIcon}>📱</Text>
-          <Text style={styles.patternCardLabel}>Top Trigger Apps</Text>
-          {triggerApps.length > 0 ? (
-            triggerApps.map((app, idx) => (
-              <Text key={idx} style={styles.patternAppItem}>
-                {idx + 1}. {mapAppDisplayName(app.package_name)}
-              </Text>
-            ))
-          ) : (
-            <Text style={styles.patternCardValue}>No triggers yet</Text>
-          )}
-        </View>
-
-        <View style={styles.patternCard}>
-          <Text style={styles.patternCardIcon}>🔥</Text>
-          <Text style={styles.patternCardLabel}>Improvement Streak</Text>
-          <Text style={styles.patternCardValue}>
-            {improvementStreak > 0
-              ? `${improvementStreak} day${improvementStreak !== 1 ? 's' : ''}`
-              : 'Start today!'}
-          </Text>
-          {improvementStreak > 0 && (
-            <Text style={styles.patternCardDetail}>Consecutive days ≥ 70 score</Text>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.insightBox}>
-        <Text style={styles.insightBoxLabel}>✨ AI COACHING INSIGHT</Text>
-        <Text style={styles.insightBoxText}>{dailyInsight}</Text>
-      </View>
-
-      {/* Behavioral Blueprint: Vulnerability Windows */}
-      {blueprint && blueprint.vulnerabilityWindows && blueprint.vulnerabilityWindows.length > 0 && (
-        <View style={styles.patternCard}>
-          <Text style={styles.patternCardIcon}>⚠️</Text>
-          <Text style={styles.patternCardLabel}>Vulnerability Windows</Text>
-          {blueprint.vulnerabilityWindows.map((w: any, idx: number) => (
-            <Text key={idx} style={styles.patternAppItem}>
-              {formatHourLabel(w.startHour)} – {formatHourLabel(w.endHour)} ({w.severity})
-            </Text>
-          ))}
-        </View>
-      )}
-
-      {blueprint && blueprint.weeklyTrend && (
-        <View style={styles.patternCard}>
-          <Text style={styles.patternCardIcon}>
-            {blueprint.weeklyTrend === 'improving' ? '📈' : blueprint.weeklyTrend === 'declining' ? '📉' : '➡️'}
-          </Text>
-          <Text style={styles.patternCardLabel}>Weekly Trend</Text>
-          <Text style={styles.patternCardValue}>
-            {blueprint.weeklyTrend.charAt(0).toUpperCase() + blueprint.weeklyTrend.slice(1)}
-          </Text>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={[styles.primaryButton, styles.fullWidthButton]}
-        onPress={() => setScreen('timeline')}
-      >
-        <Text style={styles.primaryButtonText}>View Attention Timeline</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.testButton} onPress={testUsage}>
-        <Text style={styles.testButtonText}>Test Data Pull</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={() => setScreen('home')}
-      >
-        <Text style={styles.secondaryButtonText}>Back to Home</Text>
-      </TouchableOpacity>
-    </ScrollView>
+    <InsightsScreen
+      onBack={() => setScreen('home')}
+      weeklyScores={weeklyScores}
+      microChecks={microChecks}
+      burstEvents={burstEvents}
+      triggerApps={triggerApps}
+      improvementStreak={improvementStreak}
+      vulnerableHourData={vulnerableHourData}
+    />
   );
+
 
   const renderTimeline = () => (
     <TimelineScreen onBack={() => {

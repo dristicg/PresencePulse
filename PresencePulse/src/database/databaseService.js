@@ -575,3 +575,44 @@ export const getHourlyHeatStats = async (daysBack = 7) => {
         return Array(24).fill(0);
     }
 };
+
+export const getHeatSignatureData = async () => {
+    if (!db) return Array(24).fill(null).map((_, i) => ({ hour: i, micro_check_count: 0, phubbing_count: 0, burst_count: 0 }));
+    try {
+        const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        const [results] = await db.executeSql(
+            `SELECT 
+                CAST(strftime('%H', startTime / 1000, 'unixepoch', 'localtime') AS INTEGER) as hour,
+                COUNT(CASE WHEN type = 'micro-check' THEN 1 END) as micro_check_count,
+                COUNT(CASE WHEN type = 'micro-check' AND is_social_context = 1 THEN 1 END) as phubbing_count,
+                COUNT(CASE WHEN type = 'burst' THEN 1 END) as burst_count
+             FROM sessions
+             WHERE startTime > ?
+             GROUP BY hour`,
+            [sevenDaysAgo]
+        );
+
+        const dataGrid = Array(24).fill(null).map((_, i) => ({
+            hour: i,
+            micro_check_count: 0,
+            phubbing_count: 0,
+            burst_count: 0
+        }));
+
+        for (let i = 0; i < results.rows.length; i++) {
+            const row = results.rows.item(i);
+            if (row.hour >= 0 && row.hour < 24) {
+                dataGrid[row.hour] = {
+                    hour: row.hour,
+                    micro_check_count: row.micro_check_count,
+                    phubbing_count: row.phubbing_count,
+                    burst_count: row.burst_count
+                };
+            }
+        }
+        return dataGrid;
+    } catch (error) {
+        console.error('[PresencePulse DB] Get heat signature error:', error);
+        return Array(24).fill(null).map((_, i) => ({ hour: i, micro_check_count: 0, phubbing_count: 0, burst_count: 0 }));
+    }
+};
