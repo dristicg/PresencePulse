@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSessionsForDate } from '../database/databaseService';
 
 const TOTAL_HEIGHT = 1440;
@@ -39,6 +40,7 @@ const durationToHeight = (durationSeconds) => {
 };
 
 export default function TimelineScreen({ onBack }) {
+    const insets = useSafeAreaInsets();
     const [sessions, setSessions] = useState([]);
     const [selectedSession, setSelectedSession] = useState(null);
     const [currentTimeY, setCurrentTimeY] = useState(0);
@@ -76,25 +78,25 @@ export default function TimelineScreen({ onBack }) {
     return (
         <View style={styles.container}>
             {/* Title section & Legend */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
                 <Text style={styles.title}>Attention Timeline</Text>
                 <Text style={styles.subtitle}>Your presence map for today</Text>
 
                 <View style={styles.legend}>
                     <View style={styles.legendRow}>
-                        <View style={[styles.legendDot, { backgroundColor: '#2D9E5F' }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#10B981' }]} />
                         <Text style={styles.legendText}>Normal session</Text>
                     </View>
                     <View style={styles.legendRow}>
-                        <View style={[styles.legendDot, { backgroundColor: '#FF8C00' }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
                         <Text style={styles.legendText}>Micro-check</Text>
                     </View>
                     <View style={styles.legendRow}>
-                        <View style={[styles.legendDot, { backgroundColor: '#E94560' }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#F43F5E' }]} />
                         <Text style={styles.legendText}>Phubbing</Text>
                     </View>
                     <View style={styles.legendRow}>
-                        <View style={[styles.legendDot, { backgroundColor: '#CC0000' }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#E11D48' }]} />
                         <Text style={styles.legendText}>Burst</Text>
                     </View>
                 </View>
@@ -119,17 +121,17 @@ export default function TimelineScreen({ onBack }) {
 
                 {/* Render Session Bars */}
                 {sessions.map((session, index) => {
-                    let barColor = '#2D9E5F'; // Normal
+                    let barColor = '#10B981'; // Normal
                     if (session.session_type === 'micro-check') {
                         if (session.is_social_context) {
-                            barColor = '#E94560'; // Phubbing
+                            barColor = '#F43F5E'; // Phubbing
                         } else {
-                            barColor = '#FF8C00'; // Micro-check
+                            barColor = '#F59E0B'; // Micro-check
                         }
                     }
                     if (session.isPhubbing && session.session_type !== 'micro-check') {
                         // Dark Red burst or extended phubbing 
-                        barColor = '#CC0000';
+                        barColor = '#E11D48';
                     }
 
                     const yPos = timeToY(session.start_time);
@@ -146,6 +148,7 @@ export default function TimelineScreen({ onBack }) {
 
                 {/* Current Time Indicator */}
                 <View style={[styles.currentTimeIndicator, { top: currentTimeY }]} />
+                <View style={[styles.currentTimeGlow, { top: currentTimeY }]} />
             </ScrollView>
 
             {/* Detail Modal */}
@@ -184,55 +187,61 @@ export default function TimelineScreen({ onBack }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0F172A',
+        backgroundColor: '#09090B',
     },
     header: {
-        paddingTop: 50,
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-        backgroundColor: '#1E293B',
+        paddingHorizontal: 24,
+        paddingBottom: 24,
+        backgroundColor: 'rgba(24,24,27,0.8)',
         borderBottomWidth: 1,
-        borderBottomColor: '#334155'
+        borderBottomColor: '#27272A',
     },
     title: {
-        fontSize: 24,
-        color: '#F1F5F9',
-        fontWeight: 'bold',
+        fontSize: 32,
+        color: '#FFFFFF',
+        fontWeight: '900',
+        letterSpacing: -0.5,
     },
     subtitle: {
-        fontSize: 14,
-        color: '#94A3B8',
-        marginTop: 4,
+        fontSize: 15,
+        color: '#A1A1AA',
+        marginTop: 6,
+        fontWeight: '500',
     },
     legend: {
-        marginTop: 15,
+        marginTop: 20,
     },
     legendRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 8,
     },
     legendDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        marginRight: 8,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        marginRight: 10,
+        shadowOpacity: 0.5,
+        shadowRadius: 5,
+        elevation: 3,
     },
     legendText: {
-        color: '#CBD5E1',
-        fontSize: 13,
+        color: '#D4D4D8',
+        fontSize: 14,
+        fontWeight: '600',
     },
     backButton: {
-        marginTop: 15,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: '#334155',
-        borderRadius: 6,
+        marginTop: 20,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        backgroundColor: '#27272A',
+        borderRadius: 12,
         alignSelf: 'flex-start'
     },
     backButtonText: {
-        color: '#F8FAFC',
-        fontWeight: '600'
+        color: '#F4F4F5',
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
     scrollContainer: {
         flex: 1,
@@ -240,7 +249,7 @@ const styles = StyleSheet.create({
     timelineContent: {
         height: TOTAL_HEIGHT,
         position: 'relative',
-        backgroundColor: '#0F172A',
+        backgroundColor: '#09090B',
     },
     hourLineContainer: {
         position: 'absolute',
@@ -251,66 +260,88 @@ const styles = StyleSheet.create({
     },
     hourText: {
         width: 50,
-        color: '#64748B',
+        color: '#A1A1AA',
         fontSize: 12,
         textAlign: 'right',
-        paddingRight: 8,
+        paddingRight: 10,
+        fontWeight: '700',
     },
     gridLine: {
         flex: 1,
         height: 1,
-        backgroundColor: '#334155',
+        backgroundColor: '#27272A',
     },
     sessionBar: {
         position: 'absolute',
         left: 70,
         right: 20,
-        borderRadius: 4,
-        minHeight: 4,
+        borderRadius: 8,
+        minHeight: 6,
         borderWidth: 1,
-        borderColor: '#00000040'
+        borderColor: 'rgba(0,0,0,0.2)',
+        opacity: 0.9,
     },
     currentTimeIndicator: {
         position: 'absolute',
         left: 50,
         right: 0,
         height: 2,
-        backgroundColor: 'red',
+        backgroundColor: '#06B6D4',
+        shadowColor: '#06B6D4',
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    currentTimeGlow: {
+        position: 'absolute',
+        left: 50,
+        right: 0,
+        height: 10,
+        backgroundColor: 'rgba(6, 182, 212, 0.2)',
+        marginTop: -4,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: 'rgba(0,0,0,0.85)',
         justifyContent: 'center',
         alignItems: 'center'
     },
     modalContent: {
-        backgroundColor: '#1E293B',
-        padding: 24,
-        borderRadius: 12,
+        backgroundColor: '#18181B',
+        padding: 30,
+        borderRadius: 24,
         width: '85%',
+        borderWidth: 1,
+        borderColor: '#27272A',
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#F1F5F9',
-        marginBottom: 16
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        marginBottom: 16,
+        letterSpacing: -0.5,
     },
     modalText: {
         fontSize: 16,
-        color: '#CBD5E1',
-        marginBottom: 10,
-        lineHeight: 24
+        color: '#D4D4D8',
+        marginBottom: 12,
+        lineHeight: 24,
+        fontWeight: '500',
     },
     closeButton: {
-        marginTop: 20,
-        backgroundColor: '#3B82F6',
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center'
+        marginTop: 24,
+        backgroundColor: '#7C3AED',
+        paddingVertical: 14,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: '#7C3AED',
+        elevation: 8,
     },
     closeButtonText: {
         color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16
+        fontWeight: '900',
+        fontSize: 16,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     }
 });

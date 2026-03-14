@@ -1,14 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Button,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   ScrollView,
+  Animated,
+  Easing,
 } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   getBurstCount,
   getDriftSeverity,
@@ -42,10 +44,10 @@ import WeeklyHeatmap from './src/components/WeeklyHeatmap';
 
 function App() {
   return (
-    <>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaProvider>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <ScreenManager />
-    </>
+    </SafeAreaProvider>
   );
 }
 
@@ -57,9 +59,9 @@ type ScoreVisual = {
 type SensitivityMode = 'Strict' | 'Normal' | 'Relaxed';
 
 const SCORE_VISUALS: Record<string, ScoreVisual> = {
-  High: { accent: '#22C55E', surface: '#102A1A' },
-  Medium: { accent: '#EAB308', surface: '#2A1F0A' },
-  Low: { accent: '#EF4444', surface: '#2F0F11' },
+  High: { accent: '#00FFA3', surface: '#002B1B' },
+  Medium: { accent: '#FFDF00', surface: '#332D00' },
+  Low: { accent: '#FF3366', surface: '#330014' },
 };
 
 const SENSITIVITY_OPTIONS: Array<{
@@ -110,6 +112,35 @@ function ScreenManager() {
   const [vulnerableHourData, setVulnerableHourData] = useState<{hour: number, micro_check_count: number}>({hour: -1, micro_check_count: 0});
   const [zenActive, setZenActive] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
+
+  const insets = useSafeAreaInsets();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 1500,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        })
+      ])
+    ).start();
+
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const refreshMetrics = () => {
     setMicroChecks(getMicroCheckCount());
@@ -270,6 +301,36 @@ function ScreenManager() {
           <Text style={styles.appName}>Presence Pulse</Text>
           <Text style={styles.tagline}>Detect. Reflect. Reconnect.</Text>
         </View>
+        <Animated.View style={[styles.presenceCard, { borderColor: scoreAccentColor, opacity: fadeAnim }]}>
+          <Text style={styles.presenceLabel}>Presence Score</Text>
+          <Animated.View style={[styles.scoreCircle, { borderColor: scoreAccentColor, transform: [{ scale: pulseAnim }], shadowColor: scoreAccentColor, elevation: 12 }]}>
+            <Text style={[styles.scoreValue, { color: scoreAccentColor }]}>
+              {presenceScore}%
+            </Text>
+          </Animated.View>
+          <View
+            style={[
+              styles.scoreCategoryTag,
+              {
+                backgroundColor: scoreVisual.surface,
+                borderColor: scoreAccentColor,
+              },
+            ]}
+          >
+            <Text
+              style={[styles.scoreCategoryTagText, { color: scoreAccentColor }]}
+            >
+              {scoreCategory} Focus
+            </Text>
+          </View>
+          <Text style={styles.presenceSubtitle}>Your Current Presence Score</Text>
+        </Animated.View>
+
+        <View style={styles.metricsRow}>
+          <MetricCard label="Micro-checks Today" value={String(microChecks)} />
+          <MetricCard label="Burst Events" value={String(burstEvents)} />
+        </View>
+
         <TouchableOpacity
           style={[styles.zenButton, zenActive && styles.zenButtonActive]}
           onPress={() => {
@@ -286,36 +347,6 @@ function ScreenManager() {
           <Text style={styles.zenBannerText}>🧘 Zen Mode — Tracking paused</Text>
         </View>
       )}
-
-      <View style={[styles.presenceCard, { borderColor: scoreAccentColor }]}>
-        <Text style={styles.presenceLabel}>Presence Score</Text>
-        <View style={[styles.scoreCircle, { borderColor: scoreAccentColor }]}>
-          <Text style={[styles.scoreValue, { color: scoreAccentColor }]}>
-            {presenceScore}%
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.scoreCategoryTag,
-            {
-              backgroundColor: scoreVisual.surface,
-              borderColor: scoreAccentColor,
-            },
-          ]}
-        >
-          <Text
-            style={[styles.scoreCategoryTagText, { color: scoreAccentColor }]}
-          >
-            {scoreCategory} Focus
-          </Text>
-        </View>
-        <Text style={styles.presenceSubtitle}>Your Current Presence Score</Text>
-      </View>
-
-      <View style={styles.metricsRow}>
-        <MetricCard label="Micro-checks Today" value={String(microChecks)} />
-        <MetricCard label="Burst Events" value={String(burstEvents)} />
-      </View>
 
       <TouchableOpacity
         style={[styles.primaryButton, styles.homeButton]}
@@ -390,7 +421,7 @@ function ScreenManager() {
       <Text style={styles.title}>Your Attention Insights</Text>
 
       {/* Phase 7: Weekly Presence Heatmap */}
-      <WeeklyHeatmap scores={weeklyScores} />
+      {weeklyScores.length > 0 && <WeeklyHeatmap scores={weeklyScores} />}
 
       <View style={styles.cardGroup}>
         <InsightCard
@@ -602,7 +633,7 @@ function ScreenManager() {
   const showBottomNav = !['social', 'drift', 'reconnect'].includes(screen);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.screenContent}>{renderScreen()}</View>
 
       {/* Global Reflection Modal — rendered outside screen content */}
@@ -615,7 +646,7 @@ function ScreenManager() {
       />
 
       {showBottomNav && (
-        <View style={styles.bottomNav}>
+        <View style={[styles.bottomNav, { paddingBottom: insets.bottom || 16 }]}>
           <TouchableOpacity
             style={[styles.navTab, screen === 'home' && styles.navTabActive]}
             onPress={() => setScreen('home')}
@@ -646,7 +677,7 @@ function ScreenManager() {
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -664,8 +695,8 @@ function InsightCard({
   detail?: string;
 }) {
   return (
-    <View
-      style={[styles.card, accentColor ? { borderColor: accentColor } : null]}
+    <Animated.View
+      style={[styles.card, accentColor ? { borderColor: accentColor, shadowColor: accentColor, elevation: 8 } : null]}
     >
       <Text style={styles.cardLabel}>{label}</Text>
       <Text
@@ -677,7 +708,7 @@ function InsightCard({
         {value}
       </Text>
       {detail ? <Text style={styles.cardDetail}>{detail}</Text> : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -701,7 +732,7 @@ function SuggestionCard({ label }: { label: string }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#09090B', // Deep black modern background
   },
   screenContent: {
     flex: 1,
@@ -723,153 +754,171 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   title: {
-    fontSize: 30,
-    color: '#F1F5F9',
-    fontWeight: '700',
+    fontSize: 32,
+    color: '#FFFFFF',
+    fontWeight: '900',
     textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: -0.5,
   },
   tagline: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: '#A1A1AA',
     textAlign: 'center',
     marginBottom: 20,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    fontWeight: '700',
   },
   subtitle: {
-    fontSize: 15,
-    color: '#94A3B8',
+    fontSize: 16,
+    color: '#A1A1AA',
     textAlign: 'center',
     marginBottom: 32,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   primaryButton: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    paddingHorizontal: 36,
-    borderRadius: 12,
+    backgroundColor: '#7C3AED', // Vibrant modern purple
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 20, // More rounded GenZ style
+    shadowColor: '#7C3AED',
+    elevation: 10,
   },
   fullWidthButton: {
     width: '100%',
     marginBottom: 20,
   },
   primaryButtonText: {
-    color: '#E2E8F0',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '800',
     fontSize: 16,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   warning: {
-    fontSize: 22,
-    color: '#F87171',
-    fontWeight: '700',
+    fontSize: 24,
+    color: '#EF4444',
+    fontWeight: '900',
     textAlign: 'center',
     marginBottom: 16,
+    textShadowColor: '#EF4444',
+    textShadowRadius: 10,
   },
   severityLabel: {
     fontSize: 18,
     color: '#FBBF24',
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'center',
     marginBottom: 12,
   },
   cardGroup: {
     width: '100%',
-    gap: 24,
+    gap: 16,
     marginBottom: 32,
   },
   card: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: 'rgba(24, 24, 27, 0.7)', // Translucent glass feel
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#2F3B53',
+    borderColor: '#27272A',
   },
   cardLabel: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginBottom: 8,
+    color: '#A1A1AA',
+    fontSize: 12,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    fontWeight: '700',
+  },
+  cardValue: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  cardValueLarge: {
+    color: '#FFFFFF',
+    fontSize: 38,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  cardDetail: {
+    color: '#A1A1AA',
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  cardValue: {
-    color: '#F1F5F9',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  cardValueLarge: {
-    color: '#F1F5F9',
-    fontSize: 34,
-    fontWeight: '800',
-  },
-  cardDetail: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
   insightBox: {
     width: '100%',
-    backgroundColor: '#1C2B4B',
-    padding: 18,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#60A5FA',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
     marginBottom: 24,
   },
   insightBoxLabel: {
-    color: '#93C5FD',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    marginBottom: 8,
+    color: '#60A5FA',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginBottom: 10,
+    textTransform: 'uppercase',
   },
   insightBoxText: {
     color: '#E2E8F0',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 24,
     fontWeight: '500',
-    fontStyle: 'italic',
   },
   secondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    paddingVertical: 14,
+    paddingHorizontal: 36,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: '#3F3F46',
     marginTop: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   secondaryButtonText: {
-    color: '#CBD5F5',
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    color: '#E4E4E7',
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   timeline: {
     width: '100%',
-    gap: 12,
+    gap: 16,
     marginVertical: 24,
   },
   timelineItem: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#111C2F',
+    borderColor: '#27272A',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(24, 24, 27, 0.8)',
   },
   timelineItemHighlight: {
-    borderColor: '#F87171',
+    borderColor: '#F43F5E',
+    shadowColor: '#F43F5E',
+    elevation: 5,
   },
   timelineTime: {
-    color: '#64748B',
+    color: '#A1A1AA',
     fontSize: 13,
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 6,
   },
   timelineEvent: {
-    color: '#E2E8F0',
-    fontSize: 17,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
   },
   homeWrapper: {
     flex: 1,
@@ -902,56 +951,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   appName: {
-    fontSize: 34,
-    color: '#F8FAFC',
-    fontWeight: '800',
+    fontSize: 38,
+    color: '#FFFFFF',
+    fontWeight: '900',
+    letterSpacing: -1,
   },
   presenceCard: {
-    backgroundColor: '#111C2F',
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: 'rgba(24, 24, 27, 0.4)',
+    borderRadius: 40,
+    padding: 32,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    borderWidth: 2,
   },
   presenceLabel: {
-    color: '#94A3B8',
-    fontSize: 13,
-    letterSpacing: 1,
+    color: '#A1A1AA',
+    fontSize: 14,
+    letterSpacing: 2,
     textTransform: 'uppercase',
-    marginBottom: 16,
+    fontWeight: '800',
+    marginBottom: 24,
   },
   scoreCircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    borderWidth: 8,
-    borderColor: '#2563EB',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
+    backgroundColor: '#09090B',
   },
   scoreValue: {
-    color: '#F8FAFC',
-    fontSize: 42,
-    fontWeight: '800',
+    fontSize: 56,
+    fontWeight: '900',
+    letterSpacing: -2,
   },
   presenceSubtitle: {
-    color: '#CBD5F5',
-    fontSize: 14,
+    color: '#A1A1AA',
+    fontSize: 15,
+    fontWeight: '600',
     textAlign: 'center',
   },
   scoreCategoryTag: {
-    paddingVertical: 6,
-    paddingHorizontal: 18,
-    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 20,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   scoreCategoryTagText: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
   metricsRow: {
@@ -960,23 +1012,25 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: '#1E293B',
-    borderRadius: 18,
-    padding: 20,
+    backgroundColor: 'rgba(24, 24, 27, 0.7)',
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#222F44',
+    borderColor: '#27272A',
   },
   metricLabel: {
-    color: '#94A3B8',
-    fontSize: 13,
+    color: '#A1A1AA',
+    fontSize: 12,
     textTransform: 'uppercase',
     marginBottom: 12,
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    fontWeight: '700',
   },
   metricValue: {
-    color: '#F8FAFC',
-    fontSize: 28,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -1,
   },
   settingsGroup: {
     width: '100%',
@@ -984,28 +1038,30 @@ const styles = StyleSheet.create({
     marginVertical: 32,
   },
   settingOption: {
-    backgroundColor: '#17233A',
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: 'rgba(24, 24, 27, 0.5)',
+    borderRadius: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#1F2B40',
+    borderColor: '#27272A',
   },
   settingOptionSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#13213A',
+    borderColor: '#7C3AED',
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
   },
   settingOptionTitle: {
-    color: '#E2E8F0',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6,
+    color: '#E4E4E7',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
   },
   settingOptionTitleSelected: {
-    color: '#60A5FA',
+    color: '#A855F7',
   },
   settingOptionSubtitle: {
-    color: '#94A3B8',
-    fontSize: 14,
+    color: '#A1A1AA',
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 22,
   },
   homeButton: {
     marginTop: 24,
@@ -1045,47 +1101,52 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   testButton: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 24,
-    marginTop: 8,
+    marginTop: 12,
   },
   testButtonText: {
-    color: '#64748B',
-    fontSize: 13,
+    color: '#71717A',
+    fontSize: 12,
     textAlign: 'center',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
+    backgroundColor: 'rgba(9, 9, 11, 0.95)', // Translucent dark
     borderTopWidth: 1,
-    borderTopColor: '#2F3B53',
-    paddingBottom: 4,
-    paddingTop: 8,
+    borderTopColor: '#27272A',
+    paddingTop: 12,
   },
   navTab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   navTabActive: {
-    borderTopWidth: 2,
-    borderTopColor: '#3B82F6',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)', // Neon purple glow background
+    borderRadius: 16,
+    marginHorizontal: 8,
   },
   navTabIcon: {
-    fontSize: 18,
-    marginBottom: 2,
+    fontSize: 22,
+    marginBottom: 4,
+    opacity: 0.5,
   },
   navTabIconActive: {
     opacity: 1,
   },
   navTabLabel: {
-    color: '#64748B',
+    color: '#52525B',
     fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   navTabLabelActive: {
-    color: '#60A5FA',
+    color: '#A855F7',
   },
   patternSection: {
     width: '100%',
@@ -1093,39 +1154,41 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   patternCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 18,
+    backgroundColor: 'rgba(24, 24, 27, 0.7)',
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#2F3B53',
+    borderColor: '#27272A',
   },
   patternCardIcon: {
-    fontSize: 22,
-    marginBottom: 6,
+    fontSize: 28,
+    marginBottom: 12,
   },
   patternCardLabel: {
-    color: '#94A3B8',
+    color: '#A1A1AA',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   patternCardValue: {
-    color: '#F1F5F9',
-    fontSize: 20,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   patternCardDetail: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 4,
+    color: '#71717A',
+    fontSize: 13,
+    marginTop: 6,
+    fontWeight: '600',
   },
   patternAppItem: {
-    color: '#E2E8F0',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 4,
+    color: '#E4E4E7',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 8,
   },
 });
 

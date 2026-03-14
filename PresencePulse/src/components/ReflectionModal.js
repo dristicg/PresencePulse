@@ -73,80 +73,91 @@ export default function ReflectionModal({ visible, onClose }) {
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.85)',
+        backgroundColor: 'rgba(0,0,0,0.9)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20
     },
     content: {
-        backgroundColor: '#1E293B',
-        borderRadius: 16,
-        padding: 24,
+        backgroundColor: '#13131A',
+        borderRadius: 24,
+        padding: 32,
         width: '100%',
         shadowColor: '#000',
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 8,
+        shadowOpacity: 0.5,
+        shadowRadius: 15,
+        elevation: 10,
+        borderWidth: 1,
+        borderColor: '#27272A',
     },
     title: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#F1F5F9',
+        fontSize: 26,
+        fontWeight: '900',
+        color: '#FFFFFF',
         marginBottom: 8,
-        textAlign: 'center'
+        textAlign: 'center',
+        letterSpacing: -0.5,
     },
     subtitle: {
-        fontSize: 14,
-        color: '#94A3B8',
+        fontSize: 15,
+        color: '#A1A1AA',
         marginBottom: 24,
-        textAlign: 'center'
+        textAlign: 'center',
+        fontWeight: '500',
     },
     optionBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#334155',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 10,
+        backgroundColor: 'rgba(24, 24, 27, 0.7)',
+        padding: 18,
+        borderRadius: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#27272A',
     },
     emoji: {
-        fontSize: 28,
+        fontSize: 32,
         marginRight: 16
     },
     textContainer: {
         flex: 1
     },
     optTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#F8FAFC'
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        letterSpacing: -0.5,
     },
     optDesc: {
         fontSize: 13,
-        color: '#94A3B8',
-        marginTop: 2
+        color: '#A1A1AA',
+        marginTop: 4,
+        fontWeight: '500',
     },
     dismissBtn: {
         marginTop: 16,
-        padding: 12,
+        padding: 14,
         alignItems: 'center'
     },
     dismissText: {
-        color: '#64748B',
-        fontSize: 16,
-        fontWeight: '600'
+        color: '#71717A',
+        fontSize: 15,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     thankYouContainer: {
         alignItems: 'center',
         paddingVertical: 32
     },
     thankYouIcon: {
-        fontSize: 48,
+        fontSize: 56,
         marginBottom: 16
     },
     thankYouText: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#2D9E5F'
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#10B981',
+        letterSpacing: -0.5,
     }
 });

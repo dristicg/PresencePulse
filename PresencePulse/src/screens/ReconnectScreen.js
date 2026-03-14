@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ReconnectScreen({ burstCount, onComplete, onSkip }) {
+    const insets = useSafeAreaInsets();
     const [mode, setMode] = useState('gate'); // 'gate' | 'menu' | 'breathe'
     const [gateTimeLeft, setGateTimeLeft] = useState(30);
     const [timeLeft, setTimeLeft] = useState(120);
@@ -122,8 +124,8 @@ export default function ReconnectScreen({ burstCount, onComplete, onSkip }) {
         }
 
         return (
-            <View style={styles.container}>
-                <Text style={styles.timer}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</Text>
+            <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+                <Text style={[styles.timer, { top: Math.max(insets.top + 20, 60) }]}>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</Text>
                 <View style={styles.animationContainer}>
                     <Animated.View style={[styles.circle, { transform: [{ scale: scaleAnim }] }]} />
                     <Text style={styles.breatheText}>{isInhaling ? 'Inhale' : 'Exhale'}</Text>
@@ -134,7 +136,7 @@ export default function ReconnectScreen({ burstCount, onComplete, onSkip }) {
 
     // MENU — shown after the 30-second gate
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             <Text style={styles.title}>You drifted into phone mode again.</Text>
             <Text style={styles.subtitle}>
                 We detected {burstCount} burst limits exceeded today. Let's disconnect for a moment.
@@ -167,7 +169,7 @@ export default function ReconnectScreen({ burstCount, onComplete, onSkip }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#1A1A2E',
+        backgroundColor: '#09090B',
         padding: 24,
         justifyContent: 'center'
     },
@@ -200,54 +202,63 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5
     },
     title: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        color: '#F1F5F9',
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#FFFFFF',
         textAlign: 'center',
-        marginBottom: 12
+        marginBottom: 16,
+        letterSpacing: -0.5,
     },
     subtitle: {
         fontSize: 16,
-        color: '#94A3B8',
+        color: '#A1A1AA',
         textAlign: 'center',
         marginBottom: 40,
-        lineHeight: 24
+        lineHeight: 24,
+        fontWeight: '500',
     },
     optionsList: {
-        width: '100%'
+        width: '100%',
+        gap: 16,
     },
     optionCard: {
-        backgroundColor: '#533483',
-        padding: 20,
-        borderRadius: 16,
-        marginBottom: 16
+        backgroundColor: 'rgba(124, 58, 237, 0.15)', // Glassy Purple accent
+        padding: 24,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#7C3AED',
     },
     cardTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: 'white',
-        marginBottom: 4
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        marginBottom: 8,
+        letterSpacing: -0.5,
     },
     cardDesc: {
-        fontSize: 14,
-        color: '#E2E8F0'
+        fontSize: 15,
+        color: '#D4D4D8',
+        fontWeight: '500',
     },
     skipBtn: {
-        marginTop: 20,
-        alignItems: 'center'
+        marginTop: 32,
+        alignItems: 'center',
+        paddingVertical: 12,
     },
     skipText: {
-        color: '#64748B',
-        fontSize: 16,
-        fontWeight: '600'
+        color: '#71717A',
+        fontSize: 15,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     timer: {
-        fontSize: 32,
-        fontWeight: '300',
-        color: '#F1F5F9',
+        fontSize: 48,
+        fontWeight: '900',
+        color: '#FFFFFF',
         position: 'absolute',
-        top: 60,
-        alignSelf: 'center'
+        alignSelf: 'center',
+        letterSpacing: 2,
     },
     animationContainer: {
         flex: 1,
@@ -256,35 +267,45 @@ const styles = StyleSheet.create({
         maxHeight: 300
     },
     circle: {
-        width: 150,
-        height: 150,
-        borderRadius: 75,
-        backgroundColor: '#2D9E5F',
-        opacity: 0.6,
-        position: 'absolute'
+        width: 160,
+        height: 160,
+        borderRadius: 80,
+        backgroundColor: '#10B981', // Neon Green accent
+        opacity: 0.2,
+        position: 'absolute',
+        borderWidth: 2,
+        borderColor: '#10B981',
+        shadowColor: '#10B981',
+        elevation: 10,
     },
     breatheText: {
-        fontSize: 24,
-        fontWeight: '600',
-        color: '#F1F5F9',
-        zIndex: 10
+        fontSize: 36,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        zIndex: 10,
+        letterSpacing: -1,
     },
     successTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2D9E5F',
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#10B981',
         textAlign: 'center',
-        marginBottom: 40
+        marginBottom: 40,
+        letterSpacing: -1,
     },
     primaryBtn: {
-        backgroundColor: '#2D9E5F',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center'
+        backgroundColor: '#10B981',
+        paddingVertical: 18,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: '#10B981',
+        elevation: 10,
     },
     btnText: {
-        color: 'white',
+        color: '#09090B',
         fontSize: 18,
-        fontWeight: 'bold'
+        fontWeight: '900',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     }
 });

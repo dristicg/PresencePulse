@@ -3,16 +3,16 @@ import { View, Text, StyleSheet } from 'react-native';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-const getScoreColor = (score) => {
-    if (score === null || score === undefined) return '#EEEEEE';
-    if (score >= 80) return '#2D9E5F';
-    if (score >= 65) return '#7BC47F';
-    if (score >= 50) return '#FFB347';
-    if (score >= 35) return '#FF7043';
-    return '#E94560';
+const getScoreColor = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return 'rgba(255,255,255,0.05)';
+    if (score >= 80) return '#10B981'; // Neon Green
+    if (score >= 65) return '#34D399'; // Mint Green
+    if (score >= 50) return '#F59E0B'; // Neon Orange
+    if (score >= 35) return '#F43F5E'; // Vibrant Pink
+    return '#E11D48'; // Neon Red
 };
 
-const generateLast7Days = (scores) => {
+const generateLast7Days = (scores: any[]) => {
     const days = [];
     const today = new Date();
 
@@ -22,7 +22,7 @@ const generateLast7Days = (scores) => {
         const dateStr = d.toISOString().split('T')[0];
         const dayLabel = DAY_LABELS[d.getDay()];
 
-        const match = scores.find((s) => s.date === dateStr);
+        const match = scores.find((s: any) => s.date === dateStr);
         days.push({
             date: dateStr,
             score: match ? match.presence_score : null,
@@ -33,7 +33,7 @@ const generateLast7Days = (scores) => {
     return days;
 };
 
-export default function WeeklyHeatmap({ scores = [] }) {
+export default function WeeklyHeatmap({ scores = [] }: { scores?: any[] }) {
     const days = generateLast7Days(scores);
 
     return (
@@ -62,20 +62,20 @@ export default function WeeklyHeatmap({ scores = [] }) {
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        backgroundColor: '#1E293B',
-        borderRadius: 16,
-        padding: 16,
+        backgroundColor: 'rgba(24, 24, 27, 0.7)',
+        borderRadius: 24,
+        padding: 24,
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: '#2F3B53',
+        borderColor: '#27272A',
     },
     sectionTitle: {
-        color: '#94A3B8',
-        fontSize: 11,
-        fontWeight: '700',
+        color: '#A1A1AA',
+        fontSize: 12,
+        fontWeight: '800',
         letterSpacing: 1.5,
         textTransform: 'uppercase',
-        marginBottom: 14,
+        marginBottom: 20,
     },
     row: {
         flexDirection: 'row',
@@ -84,22 +84,23 @@ const styles = StyleSheet.create({
     },
     dayColumn: {
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
     },
     square: {
-        width: 36,
-        height: 36,
-        borderRadius: 8,
+        width: 38,
+        height: 38,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
     },
     scoreText: {
-        fontSize: 12,
-        fontWeight: '700',
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#FFFFFF',
     },
     dayLabel: {
-        color: '#64748B',
-        fontSize: 11,
-        fontWeight: '600',
+        color: '#71717A',
+        fontSize: 12,
+        fontWeight: '700',
     },
 });
