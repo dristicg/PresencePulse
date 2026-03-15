@@ -120,6 +120,8 @@ function ScreenManager() {
   const [reflectionBreakdown, setReflectionBreakdown] = useState<any>({});
   const [fiveSecondStats, setFiveSecondStats] = useState<any>({ won: 0, lost: 0, rate: 0 });
   const [presenceDebt, setPresenceDebt] = useState(0);
+  const [checkInDone, setCheckInDone] = useState(false);
+  const [checkInResponse, setCheckInResponse] = useState('');
 
   const insets = useSafeAreaInsets();
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -276,6 +278,10 @@ function ScreenManager() {
 
       // Phase 2: Restore behavioral status from SQLite
       const todayMetrics = await getDailyMetrics();
+      if (todayMetrics) {
+        setCheckInDone(!!todayMetrics.checkin_done);
+        setCheckInResponse(todayMetrics.checkin_response || '');
+      }
       initializeStateFromStorage(todayMetrics);
       refreshMetrics();
 
@@ -461,6 +467,14 @@ function ScreenManager() {
       triggerApps={triggerApps}
       improvementStreak={improvementStreak}
       vulnerableHourData={vulnerableHourData}
+      checkInDone={checkInDone}
+      checkInResponse={checkInResponse}
+      onCheckInComplete={(response: string) => {
+          const { updateCheckInStatus } = require('./src/database/databaseService');
+          updateCheckInStatus(true, response);
+          setCheckInDone(true);
+          setCheckInResponse(response);
+      }}
     />
   );
 

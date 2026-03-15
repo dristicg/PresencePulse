@@ -56,12 +56,16 @@ export const initDatabase = async () => {
         burstEvents INTEGER,
         phubbing_event_count INTEGER DEFAULT 0,
         social_context_minutes INTEGER DEFAULT 0,
-        presenceScore INTEGER
+        presenceScore INTEGER,
+        checkin_done INTEGER DEFAULT 0,
+        checkin_response TEXT
       );
     `);
 
         await addColumn('ALTER TABLE daily_metrics ADD COLUMN phubbing_event_count INTEGER DEFAULT 0');
         await addColumn('ALTER TABLE daily_metrics ADD COLUMN social_context_minutes INTEGER DEFAULT 0');
+        await addColumn('ALTER TABLE daily_metrics ADD COLUMN checkin_done INTEGER DEFAULT 0');
+        await addColumn('ALTER TABLE daily_metrics ADD COLUMN checkin_response TEXT');
 
         await db.executeSql(`
           CREATE TABLE IF NOT EXISTS five_second_events (
@@ -182,6 +186,20 @@ export const updateDailyMetrics = async (metrics) => {
         console.log(`[PresencePulse DB] Updated metrics for ${date}: MC=${microChecks}, Burst=${burstEvents}, Phubbing=${phubbing_event_count}, Score=${presenceScore}`);
     } catch (error) {
         console.error('[PresencePulse DB] Update daily metrics error:', error);
+    }
+};
+
+export const updateCheckInStatus = async (done, response) => {
+    if (!db) return;
+    try {
+        const date = new Date().toISOString().split('T')[0];
+        await db.executeSql(
+            `UPDATE daily_metrics SET checkin_done = ?, checkin_response = ? WHERE date = ?`,
+            [done ? 1 : 0, response, date]
+        );
+        console.log(`[PresencePulse DB] Updated check-in status for ${date}: Done=${done}`);
+    } catch (error) {
+        console.error('[PresencePulse DB] Update check-in status error:', error);
     }
 };
 

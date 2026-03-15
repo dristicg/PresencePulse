@@ -1,6 +1,6 @@
 import { getDailyMetrics, getSessionsForDate } from '../database/databaseService';
 import { analyzePatterns } from '../engine/patternAnalyzer';
-const GEMINI_API_KEY = 'AIzaSyB7xU2ou0VBYMwFe0tgozvSm-9gQrRA-DY';
+import { GEMINI_API_KEY } from '../constants/apiKeys';
 
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 

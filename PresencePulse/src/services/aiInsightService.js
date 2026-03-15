@@ -1,5 +1,6 @@
-import axios from 'axios';
-import { CLAUDE_KEY } from '../constants/apiKeys';
+import { GEMINI_API_KEY } from '../constants/apiKeys';
+
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // STEP 3: Create AI Insight Service
 export function buildBehaviorSummary(metrics, patterns) {
@@ -74,27 +75,53 @@ Rules:
 - Just natural sentences.`;
 
     try {
-        const response = await axios.post(
-            'https://api.anthropic.com/v1/messages',
-            {
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 200,
-                messages: [{ role: "user", content: prompt }]
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': CLAUDE_KEY,
-                    'anthropic-version': '2023-06-01'
-                },
-                timeout: 15000
-            }
-        );
+        const response = await fetch(GEMINI_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
 
-        console.log('[PresencePulse] AI insight generated');
-        return response.data.content[0].text;
+        if (!response.ok) throw new Error('Gemini API Error');
+
+        const data = await response.json();
+        const insight = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        console.log('[PresencePulse] AI insight generated via Gemini');
+        return insight ? insight.trim() : getFallbackInsight(metrics);
     } catch (error) {
-        console.log('[PresencePulse] AI fallback triggered');
+        console.log('[PresencePulse] AI fallback triggered:', error);
         return getFallbackInsight(metrics);
+    }
+}
+
+export async function sendCheckInMessage(userMessage, behaviorContext) {
+    try {
+        const systemPrompt = `You are a warm digital wellness coach. The user is checking in about their phone habits.
+                         Their presence score today is ${behaviorContext.score}/100.
+                         They have had ${behaviorContext.microChecks} micro-checks so far.
+                         Respond in 2-3 sentences. Be conversational, not clinical.
+                         Do not repeat their words back. Offer one specific, actionable thought.`;
+
+        const response = await fetch(GEMINI_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [
+                    { role: 'user', parts: [{ text: `SYSTEM CONTEXT: ${systemPrompt}\n\nUSER MESSAGE: ${userMessage}` }] }
+                ]
+            })
+        });
+
+        if (!response.ok) throw new Error('Gemini API Error');
+
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        return text ? text.trim() : "I understand. Focus on one small moment of presence right now, and let's try to be more intentional with our next pick-up.";
+    } catch (error) {
+        console.error('[PresencePulse] Check-in API error:', error);
+        return "I understand. Focus on one small moment of presence right now, and let's try to be more intentional with our next pick-up.";
     }
 }
