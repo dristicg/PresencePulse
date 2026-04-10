@@ -122,6 +122,7 @@ function ScreenManager() {
   const [presenceDebt, setPresenceDebt] = useState(0);
   const [checkInDone, setCheckInDone] = useState(false);
   const [checkInResponse, setCheckInResponse] = useState('');
+  const [nudgeTier, setNudgeTier] = useState(0);
 
   const insets = useSafeAreaInsets();
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -170,6 +171,7 @@ function ScreenManager() {
     }
     setPresenceDebt(getPresenceDebt());
     setFiveSecondStats((prev: any) => ({ ...prev, rate: getWinRate5s() }));
+    setNudgeTier(getCurrentNudgeTier());
   };
 
   const loadOrGenerateDailyInsight = async () => {
@@ -255,7 +257,7 @@ function ScreenManager() {
       }
 
       intervalId = setInterval(async () => {
-        if (Date.now() - lastBleCheck.current > 60000) {
+        if (Date.now() - lastBleCheck.current > 5000) {
           lastBleCheck.current = Date.now();
           const bleResult = await checkSocialContext();
           socialContextRef.current = bleResult.isSocialContext;
@@ -267,7 +269,7 @@ function ScreenManager() {
           analyzeUsageEvents(events, socialContextRef.current);
           refreshMetrics();
         }
-      }, 5000);
+      }, 3000);
     };
 
     const initializeSequence = async () => {
@@ -346,6 +348,12 @@ function ScreenManager() {
       {zenActive && (
         <View style={styles.zenBanner}>
           <Text style={styles.zenBannerText}>🧘 Zen Mode — Tracking paused</Text>
+        </View>
+      )}
+
+      {socialContext && (
+        <View style={styles.socialIndicatorBadge}>
+          <Text style={styles.socialIndicatorText}>👤 Social Presence Detected</Text>
         </View>
       )}
 
@@ -630,7 +638,7 @@ function ScreenManager() {
 
       {/* Global Reflection Modal — rendered outside screen content */}
       <ReflectionModal
-        visible={getCurrentNudgeTier() === 2}
+        visible={nudgeTier === 2}
         onClose={() => {
           resetNudgeTier();
           refreshMetrics();
@@ -1091,6 +1099,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.3,
+  },
+  socialIndicatorBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    marginBottom: 12,
+    alignItems: 'center' as const,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  socialIndicatorText: {
+    color: '#60A5FA',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   testButton: {
     paddingVertical: 12,

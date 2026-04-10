@@ -9,44 +9,8 @@ Presence Pulse is a high-performance **Behavioral Intelligence** app for Android
 
 The app is built with a unique hybrid architecture, combining native Android background tracking with a high-level JavaScript Behavioral Engine and Gemini 1.5 Pro intelligence.
 
-```mermaid
-graph TD
-    %% Define Nodes/Modules
-    subgraph "Native Android Layer"
-        A1[UsageStatsModule.java] -->|App Events| B
-        A2[BluetoothProximityModule.java] -->|Nearby Devices| B
-        A3[Vibrator API] -.->|Haptic Feedback| F
-    end
 
-    subgraph "Behavioral Engine (JavaScript)"
-        B{contextEngine.js}
-        B1(Habit-Loop Analyzer) -.->|Time Delta < 5s| B
-        B2(Burst Controller) -.->|Threshold: 5/10m| B
-        B3(Contextual Scorer) -.->|Presence Score| B
-    end
-
-    subgraph "Storage & Analysis"
-        D[(SQLite DB)] <-->|Session Records| C(databaseService.js)
-        E(patternAnalyzer.js) -->|Vulnerability Analysis| D
-    end
-
-    subgraph "Intervention Layer (UI)"
-        F{nudgeEngine.js}
-        F1(Tier 1: Haptic) -.->|Pulse| F
-        F2(Tier 2: Reflection) -.->|Modal| F
-        F3(Tier 3: Reconnect) -.->|Zen Mode| F
-    end
-
-    %% Data Flow
-    B -->|Logs Session| C
-    B -->|Drift Severity| F
-    F -.->|Requests Nudge| A3
-
-    %% Styling for clarity
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style F fill:#bbf,stroke:#333,stroke-width:2px
-```
-
+![Architecture Diagram](<Native Android Behavior.png>)
 ---
 
 ## 🚀 The Proactive Engine (Latest Features)

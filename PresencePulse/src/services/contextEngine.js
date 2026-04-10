@@ -12,6 +12,7 @@ import { insertSession, updateDailyMetrics } from '../database/databaseService';
 import { triggerHapticNudge, shouldShowReflectionPrompt } from './nudgeEngine';
 import { categorizeApp } from './appCategorizer';
 import { isZenMode } from './zenService';
+import { evaluateAndNudge } from '../engine/nudgeEngine';
 
 const MICRO_CHECK_THRESHOLD_SECONDS = 20;
 const BURST_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -448,6 +449,11 @@ function processRealSession(session, socialContext, hasWhitelistedDevice = true)
     }
   } else {
     updateDriftSeverity();
+  }
+
+  // DEMO MOMENT: Trigger nudge engine for every social session
+  if (isPhubbing) {
+    evaluateAndNudge(true);
   }
 
   // Save parsed Android session to SQLite (all categories, for analytics)
